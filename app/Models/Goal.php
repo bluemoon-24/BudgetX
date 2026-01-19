@@ -1,0 +1,82 @@
+<?php
+
+namespace App\Models;
+
+use App\Core\Database;
+use PDO;
+
+class Goal
+{
+    private $db;
+
+    public function __construct()
+    {
+        $this->db = new Database();
+    }
+
+    public function getAllByUserId($userId)
+    {
+        $sql = "SELECT * FROM goals WHERE user_id = :user_id ORDER BY deadline ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam(':user_id', $userId);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function add($userId, $name, $targetAmount, $deadline)
+    {
+        $sql = "INSERT INTO goals (user_id, name, target_amount, deadline) VALUES (:user_id, :name, :target_amount, :deadline)";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam(':user_id', $userId);
+        $stmt->bindParam(':name', $name);
+        $stmt->bindParam(':target_amount', $targetAmount);
+        $stmt->bindParam(':deadline', $deadline);
+        return $stmt->execute();
+    }
+
+    public function getById($id)
+    {
+        $sql = "SELECT * FROM goals WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam(':id', $id);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function updateProgress($id, $userId, $amount)
+    {
+        $this->db->beginTransaction();
+        try {
+            // Update Goal
+            $goal = $this->getById($id);
+            $newAmount = $goal['current_amount'] + $amount;
+
+            // Check status
+            $status = $goal['status'];
+            if ($newAmount >= $goal['target_amount']) {
+                $status = 'completed';
+            }
+
+            $sql = "UPDATE goals SET current_amount = :amount, status = :status WHERE id = :id";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindParam(':amount', $newAmount);
+            $stmt->bindParam(':status', $status);
+            $stmt->bindParam(':id', $id);
+            $stmt->execute();
+
+            // Record Payment
+            $sql = "INSERT INTO goal_payments (goal_id, user_id, amount, date) VALUES (:goal_id, :user_id, :amount, NOW())";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindParam(':goal_id', $id);
+            $stmt->bindParam(':user_id', $userId);
+            $stmt->bindParam(':amount', $amount);
+            $stmt->execute();
+
+            $this->db->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            return false;
+        }
+    }
+}

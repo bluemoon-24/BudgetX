@@ -1,0 +1,21 @@
+{
+    "name": "BudgetX - Personal Finance Tracker",
+    "short_name": "BudgetX",
+    "start_url": "/BudgetX/public/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#4F46E5",
+    "icons": [
+        {
+            "src": "/BudgetX/public/assets/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/BudgetX/public/assets/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "orientation": "portrait"
+}
