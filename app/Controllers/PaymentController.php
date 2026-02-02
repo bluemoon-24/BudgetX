@@ -8,8 +8,12 @@ use App\Models\User;
 
 class PaymentController extends Controller
 {
+    /**
+     * Display the Upgrade to Premium pricing page
+     */
     public function upgrade()
     {
+        // Ensure user is logged in
         if (!isset($_SESSION['user_id'])) {
             $this->redirect('/BudgetX/public/login');
         }
@@ -20,67 +24,122 @@ class PaymentController extends Controller
             'price_id' => 'price_sample'      // Replace with real price
         ];
 
-        $this->view('payments/upgrade', $data);
+        $this->view('upgrade', $data);
     }
 
+    /**
+     * Start the payment process - redirects to Stripe Sandbox
+     */
     public function process()
     {
         if (!isset($_SESSION['user_id'])) {
             $this->redirect('/BudgetX/public/login');
         }
 
-        // ------------------------------------------------------------------
-        // MOCK PAYMENT PROCESS (Since Stripe Lib might not be installed)
-        // ------------------------------------------------------------------
-        // In a real app, you would:
-        // 1. \Stripe\Stripe::setApiKey('sk_test_...');
-        // 2. Create Checkout Session
-        // 3. Redirect to Stripe
+        $this->view('stripe_checkout');
+    }
 
-        // For this demo, we will simulate a successful redirect immediately
-        // allowing the reviewer to see the flow without keys/composer.
+    /**
+     * Create a Stripe charge via API
+     */
+    public function createCharge()
+    {
+        header('Content-Type: application/json');
 
-        $simulateSuccess = true;
+        if (!isset($_SESSION['user_id'])) {
+            echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
+            return;
+        }
 
-        if ($simulateSuccess) {
-            // Simulate a "session_id" from Stripe
-            $mockSessionId = 'cs_test_' . bin2hex(random_bytes(10));
-            $this->redirect("/BudgetX/public/payments/success?session_id=$mockSessionId");
+        $userId = $_SESSION['user_id'];
+        $planType = $_POST['plan_type'] ?? 'MONTHLY';
+        $token = $_POST['stripe_token'] ?? null;
+
+        // Prices in cents (e.g., 550.00 -> 55000)
+        $amount = ($planType === 'ANNUAL') ? 600000 : 55000;
+
+        if (!$token) {
+            echo json_encode(['status' => 'error', 'message' => 'Invalid payment token']);
+            return;
+        }
+
+        // Stripe API Secret Key from .env
+        $secretKey = \App\Core\Env::get('STRIPE_SECRET_KEY', 'sk_test_sample');
+
+        // Native CURL to create a charge
+        $ch = curl_init('https://api.stripe.com/v1/charges');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_USERPWD, $secretKey . ':');
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+            'amount' => $amount,
+            'currency' => 'usd',
+            'source' => $token,
+            'description' => "BudgetX Premium $planType Subscription",
+            'metadata' => ['user_id' => $userId]
+        ]));
+
+        $response = curl_exec($ch);
+        $err = curl_error($ch);
+        curl_close($ch);
+
+        if ($err) {
+            echo json_encode(['status' => 'error', 'message' => 'CURL Error: ' . $err]);
+            return;
+        }
+
+        $result = json_decode($response, true);
+
+        if (isset($result['error'])) {
+            echo json_encode(['status' => 'error', 'message' => $result['error']['message']]);
+            return;
+        }
+
+        // Success! Update user and record payment
+        $userModel = new \App\Models\User();
+        $paymentModel = new \App\Models\Payment();
+        $subscriptionModel = new \App\Models\Subscription();
+
+        $startDate = date('Y-m-d H:i:s');
+        $endDate = date('Y-m-d H:i:s', strtotime($planType === 'ANNUAL' ? '+1 year' : '+1 month'));
+
+        if ($subscriptionModel->updateSubscription($userId, 'ACTIVE', $startDate, $endDate)) {
+            $paymentModel->add($userId, $result['id'], $amount / 100, 'completed');
+            $_SESSION['role'] = 'premium';
+
+            echo json_encode([
+                'status' => 'success',
+                'message' => 'Payment processed successfully',
+                'subscription_status' => 'ACTIVE',
+                'charge_id' => $result['id']
+            ]);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Internal database error']);
         }
     }
 
-    public function success()
+    /**
+     * Retrieve payment history for the user
+     */
+    public function history()
     {
         if (!isset($_SESSION['user_id'])) {
             $this->redirect('/BudgetX/public/login');
         }
 
-        $sessionId = $_GET['session_id'] ?? null;
+        $paymentModel = new \App\Models\Payment();
+        $history = $paymentModel->getHistory($_SESSION['user_id']);
 
-        if ($sessionId) {
-            // Update User Role to Premium
-            $userId = $_SESSION['user_id'];
-            $userModel = new User();
-            $paymentModel = new Payment();
-
-            // 1. Update Role
-            if ($userModel->updateRole($userId, 'premium')) {
-                // 2. Record Payment
-                $paymentModel->add($userId, $sessionId, 9.99, 'completed');
-
-                // Update Session
-                $_SESSION['role'] = 'premium';
-
-                // Redirect to Premium Dashboard
-                $this->redirect('/BudgetX/public/user/dashboard_premium');
-            }
-        }
-
-        $this->redirect('/BudgetX/public/user/dashboard_basic');
+        $this->view('payment_history', ['history' => $history]);
     }
 
+    /**
+     * Handle payment cancellation
+     */
     public function cancel()
     {
         $this->redirect('/BudgetX/public/user/dashboard_basic');
     }
 }
+
+

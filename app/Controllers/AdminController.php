@@ -8,6 +8,10 @@ use App\Models\Admin;
 
 class AdminController extends Controller
 {
+    /**
+     * Admin Dashboard Index
+     * Aggregates platform-wide statistics for oversight.
+     */
     public function index()
     {
         // Enforce Admin Role
@@ -18,19 +22,26 @@ class AdminController extends Controller
         $adminModel = new Admin();
         $logModel = new ActivityLog();
 
+        $search = $_GET['search'] ?? null;
+
         $stats = $adminModel->getUserStats();
         $revenue = $adminModel->getTotalRevenue();
-        $users = $adminModel->getAllUsers();
-        $logs = $logModel->getAll();
+        $users = $adminModel->getAllUsers($search);
+        $activity = $adminModel->getRecentActivity(5);
 
-        $this->view('admin/dashboard', [
+        $this->view('admin_dashboard', [
             'stats' => $stats,
             'revenue' => $revenue,
             'users' => $users,
-            'logs' => $logs
+            'activity' => $activity,
+            'search' => $search
         ]);
     }
 
+    /**
+     * Update User Status
+     * Allows admins to active, deactivate, or ban accounts for safety.
+     */
     public function updateUserStatus()
     {
         if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
@@ -43,9 +54,14 @@ class AdminController extends Controller
         $adminModel = new Admin();
         $adminModel->updateUserStatus($userId, $status);
 
-        $this->redirect('/BudgetX/public/admin/dashboard');
+        $this->redirect('/BudgetX/public/admin');
     }
 
+    /**
+     * Update User Role
+     * Feature: Privilege Management
+     * Enables granular control over user roles (Basic, Premium, Admin).
+     */
     public function updateUserRole()
     {
         if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
@@ -58,6 +74,8 @@ class AdminController extends Controller
         $adminModel = new Admin();
         $adminModel->updateUserRole($userId, $role);
 
-        $this->redirect('/BudgetX/public/admin/dashboard');
+        $this->redirect('/BudgetX/public/admin');
     }
 }
+
+

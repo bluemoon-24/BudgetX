@@ -26,6 +26,9 @@ use App\Core\Router;
 
 session_start();
 
+// Load environment variables
+\App\Core\Env::load(__DIR__ . '/../.env');
+
 $router = new Router();
 
 // Define routes
@@ -38,13 +41,21 @@ $router->add('POST', '/register', 'AuthController', 'store');
 $router->add('GET', '/dashboard', 'DashboardController', 'index');
 $router->add('GET', '/user/dashboard_basic', 'DashboardController', 'basic');
 $router->add('GET', '/user/dashboard_premium', 'DashboardController', 'premium');
+$router->add('POST', '/profile/upload', 'UserController', 'uploadProfilePic');
 
 $router->add('GET', '/goals', 'GoalController', 'index');
 $router->add('GET', '/goals/create', 'GoalController', 'create');
 $router->add('POST', '/goals/store', 'GoalController', 'store');
 $router->add('GET', '/goals/add_funds', 'GoalController', 'add_funds');
 $router->add('POST', '/goals/store_funds', 'GoalController', 'store_funds');
+$router->add('POST', '/goals/accept_invitation', 'GoalController', 'acceptInvitation');
+$router->add('POST', '/goals/decline_invitation', 'GoalController', 'declineInvitation');
+$router->add('GET', '/goals/edit', 'GoalController', 'edit');
+$router->add('POST', '/goals/update', 'GoalController', 'update');
+$router->add('POST', '/goals/delete', 'GoalController', 'delete');
 $router->add('GET', '/admin', 'AdminController', 'index');
+$router->add('POST', '/admin/update_status', 'AdminController', 'updateUserStatus');
+$router->add('POST', '/admin/update_role', 'AdminController', 'updateUserRole');
 
 $router->add('GET', '/income', 'IncomeController', 'index');
 $router->add('GET', '/income/create', 'IncomeController', 'create');
@@ -68,9 +79,14 @@ $router->add('GET', '/shared_goals/add_member', 'SharedGoalController', 'add_mem
 $router->add('POST', '/shared_goals/store_member', 'SharedGoalController', 'store_member');
 $router->add('GET', '/shared_goals/add_funds', 'SharedGoalController', 'add_funds');
 $router->add('POST', '/shared_goals/store_funds', 'SharedGoalController', 'store_funds');
+$router->add('GET', '/shared_goals/edit', 'SharedGoalController', 'edit');
+$router->add('POST', '/shared_goals/update', 'SharedGoalController', 'update');
+$router->add('POST', '/shared_goals/delete', 'SharedGoalController', 'delete');
+$router->add('POST', '/shared_goals/leave', 'SharedGoalController', 'leave');
 
 $router->add('GET', '/upgrade', 'PaymentController', 'upgrade');
 $router->add('GET', '/payments/process', 'PaymentController', 'process');
+$router->add('GET', '/payments/checkout', 'PaymentController', 'checkout');
 $router->add('GET', '/payments/success', 'PaymentController', 'success');
 $router->add('GET', '/payments/cancel', 'PaymentController', 'cancel');
 

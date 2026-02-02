@@ -13,14 +13,23 @@ class Payment
         $this->db = new Database();
     }
 
-    public function add($userId, $stripePaymentId, $amount, $status)
+    public function add($userId, $stripeChargeId, $amount, $status)
     {
-        $sql = "INSERT INTO payments (user_id, stripe_payment_id, amount, status) VALUES (:user_id, :stripe_id, :amount, :status)";
+        $sql = "INSERT INTO payments (user_id, stripe_charge_id, amount, status) VALUES (:user_id, :stripe_id, :amount, :status)";
         $stmt = $this->db->prepare($sql);
         $stmt->bindParam(':user_id', $userId);
-        $stmt->bindParam(':stripe_id', $stripePaymentId);
+        $stmt->bindParam(':stripe_id', $stripeChargeId);
         $stmt->bindParam(':amount', $amount);
         $stmt->bindParam(':status', $status);
         return $stmt->execute();
+    }
+
+    public function getHistory($userId)
+    {
+        $sql = "SELECT * FROM payments WHERE user_id = :user_id ORDER BY created_at DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam(':user_id', $userId);
+        $stmt->execute();
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 }

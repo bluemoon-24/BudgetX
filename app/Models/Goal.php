@@ -64,12 +64,61 @@ class Goal
             $stmt->bindParam(':id', $id);
             $stmt->execute();
 
-            // Record Payment
+            // Record Payment in goal_payments
             $sql = "INSERT INTO goal_payments (goal_id, user_id, amount, date) VALUES (:goal_id, :user_id, :amount, NOW())";
             $stmt = $this->db->prepare($sql);
             $stmt->bindParam(':goal_id', $id);
             $stmt->bindParam(':user_id', $userId);
             $stmt->bindParam(':amount', $amount);
+            $stmt->execute();
+
+            // Deduct from Balance by adding an Expense record
+            $expenseSql = "INSERT INTO expenses (user_id, amount, category, label, date, description) 
+                          VALUES (:user_id, :amount, 'Goal Contribution', :label, CURDATE(), :description)";
+            $stmt = $this->db->prepare($expenseSql);
+            $goalName = $goal['name'];
+            $label = "Goal: $goalName";
+            $description = "Automatic deduction for goal funding";
+            $stmt->bindParam(':user_id', $userId);
+            $stmt->bindParam(':amount', $amount);
+            $stmt->bindParam(':label', $label);
+            $stmt->bindParam(':description', $description);
+            $stmt->execute();
+
+            $this->db->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            return false;
+        }
+    }
+    public function update($id, $userId, $name, $targetAmount, $deadline)
+    {
+        $sql = "UPDATE goals SET name = :name, target_amount = :target_amount, deadline = :deadline WHERE id = :id AND user_id = :user_id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam(':name', $name);
+        $stmt->bindParam(':target_amount', $targetAmount);
+        $stmt->bindParam(':deadline', $deadline);
+        $stmt->bindParam(':id', $id);
+        $stmt->bindParam(':user_id', $userId);
+        return $stmt->execute();
+    }
+
+    public function delete($id, $userId)
+    {
+        $this->db->beginTransaction();
+        try {
+            // Delete payments first
+            $sql = "DELETE FROM goal_payments WHERE goal_id = :id";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindParam(':id', $id);
+            $stmt->execute();
+
+            // Delete the goal
+            $sql = "DELETE FROM goals WHERE id = :id AND user_id = :user_id";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindParam(':id', $id);
+            $stmt->bindParam(':user_id', $userId);
             $stmt->execute();
 
             $this->db->commit();

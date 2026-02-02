@@ -1,4 +1,4 @@
-<?php require_once '../app/Views/partials/header.php'; ?>
+<?php require_once '../app/Views/header.php'; ?>
 
 <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-3xl mx-auto text-center">
@@ -22,7 +22,7 @@
                 $pdo = new PDO("mysql:host=localhost", "root", "");
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-                $sql = file_get_contents('../../database.sql');
+                $sql = file_get_contents('../database.sql');
 
                 // Split SQL into individual queries because some PDO drivers don't support multiple queries in one call
                 // But typically basic CREATE statements work or we can loop.
@@ -42,4 +42,4 @@
     </div>
 </div>
 
-<?php require_once '../app/Views/partials/footer.php'; ?>
+<?php require_once '../app/Views/footer.php'; ?>

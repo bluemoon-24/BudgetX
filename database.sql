@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     role ENUM('admin', 'basic', 'premium') DEFAULT 'basic',
     status ENUM('active', 'inactive', 'banned') DEFAULT 'active',
     currency VARCHAR(10) DEFAULT 'USD',
+    profile_pic VARCHAR(255) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -98,6 +99,21 @@ CREATE TABLE IF NOT EXISTS shared_goal_payments (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Shared Goal Invitations
+CREATE TABLE IF NOT EXISTS shared_goal_invitations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    shared_goal_id INT NOT NULL,
+    inviter_id INT NOT NULL,
+    invitee_email VARCHAR(255) NOT NULL,
+    invitee_id INT,
+    status ENUM('pending', 'accepted', 'declined') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    responded_at TIMESTAMP NULL,
+    FOREIGN KEY (shared_goal_id) REFERENCES shared_goals(id) ON DELETE CASCADE,
+    FOREIGN KEY (inviter_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (invitee_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
 -- Payments Table (Stripe Upgrades)
 CREATE TABLE IF NOT EXISTS payments (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -120,6 +136,6 @@ CREATE TABLE IF NOT EXISTS activity_logs (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- Default Admin User (Password: password123)
+-- Default Admin User (Password: password)
 INSERT INTO users (username, email, password, role) VALUES 
 ('admin', 'admin@budgetx.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin');

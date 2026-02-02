@@ -10,7 +10,7 @@ class AuthController extends Controller
 {
     public function login()
     {
-        $this->view('auth/login');
+        $this->view('login');
     }
 
     public function authenticate()
@@ -23,7 +23,7 @@ class AuthController extends Controller
 
         if ($user) {
             if ($user['status'] !== 'active') {
-                $this->view('auth/login', ['error' => 'Account is inactive or banned.']);
+                $this->view('login', ['error' => 'Account is inactive or banned.']);
                 return;
             }
 
@@ -31,6 +31,7 @@ class AuthController extends Controller
             $_SESSION['role'] = $user['role'];
             $_SESSION['username'] = $user['username'];
             $_SESSION['currency'] = $user['currency'];
+            $_SESSION['profile_pic'] = $user['profile_pic'];
 
             $logger = new ActivityLog();
             $logger->log($user['id'], 'Login', 'User logged in successfully');
@@ -43,19 +44,21 @@ class AuthController extends Controller
                 $this->redirect('/BudgetX/public/user/dashboard_basic');
             }
         } else {
-            $this->view('auth/login', ['error' => 'Invalid credentials']);
+            $this->view('login', ['error' => 'Invalid credentials']);
         }
     }
 
     public function register()
     {
-        $this->view('auth/register');
+        $this->view('register');
     }
 
     public function store()
     {
         $username = $_POST['username'];
-        $full_name = $_POST['full_name'];
+        $first_name = $_POST['first_name'];
+        $last_name = $_POST['last_name'];
+        $full_name = trim($first_name . ' ' . $last_name);
         $email = $_POST['email'];
         $password = $_POST['password'];
         $currency = $_POST['currency'];
@@ -64,7 +67,7 @@ class AuthController extends Controller
         if ($userModel->register($username, $full_name, $email, $password, $currency)) {
             $this->redirect('/BudgetX/public/login');
         } else {
-            $this->view('auth/register', ['error' => 'Registration failed. Email or username might be taken.']);
+            $this->view('register', ['error' => 'Registration failed. Email or username might be taken.']);
         }
     }
 
@@ -74,3 +77,5 @@ class AuthController extends Controller
         $this->redirect('/BudgetX/public/');
     }
 }
+
+

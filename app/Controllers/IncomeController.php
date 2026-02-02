@@ -7,6 +7,9 @@ use App\Models\Income;
 
 class IncomeController extends Controller
 {
+    /**
+     * Display all income records for the current user
+     */
     public function index()
     {
         if (!isset($_SESSION['user_id'])) {
@@ -17,17 +20,23 @@ class IncomeController extends Controller
         $incomeModel = new Income();
         $incomes = $incomeModel->getAllByUserId($userId);
 
-        $this->view('income/index', ['incomes' => $incomes]);
+        $this->view('income', ['incomes' => $incomes]);
     }
 
+    /**
+     * Show form to add new income
+     */
     public function create()
     {
         if (!isset($_SESSION['user_id'])) {
             $this->redirect('/BudgetX/public/login');
         }
-        $this->view('income/create');
+        $this->view('income_create');
     }
 
+    /**
+     * Store a new income record in the database
+     */
     public function store()
     {
         if (!isset($_SESSION['user_id'])) {
@@ -39,25 +48,30 @@ class IncomeController extends Controller
         $source = $_POST['source'];
         $date = $_POST['date'];
 
-        // Validation
+        // Validation logic
         if ($amount <= 0) {
-            $this->view('income/create', ['error' => 'Amount must be greater than 0']);
+            $this->view('income_create', ['error' => 'Amount must be greater than 0']);
             return;
         }
 
         if (strtotime($date) > time()) {
-            $this->view('income/create', ['error' => 'Date cannot be in the future']);
+            $this->view('income_create', ['error' => 'Date cannot be in the future']);
             return;
         }
 
+        // Feature: Capital Inflow Implementation
+        // Records individual income sources and updates user liquid assets
         $incomeModel = new Income();
         if ($incomeModel->add($userId, $amount, $source, $date)) {
             $this->redirect('/BudgetX/public/income');
         } else {
-            $this->view('income/create', ['error' => 'Failed to add income']);
+            $this->view('income_create', ['error' => 'Failed to add income']);
         }
     }
 
+    /**
+     * Show form to edit an existing income record
+     */
     public function edit()
     {
         if (!isset($_SESSION['user_id'])) {
@@ -76,9 +90,12 @@ class IncomeController extends Controller
             $this->redirect('/BudgetX/public/income');
         }
 
-        $this->view('income/edit', ['income' => $income]);
+        $this->view('income_edit', ['income' => $income]);
     }
 
+    /**
+     * Update an existing income record
+     */
     public function update()
     {
         if (!isset($_SESSION['user_id'])) {
@@ -104,13 +121,15 @@ class IncomeController extends Controller
         }
     }
 
+    /**
+     * Delete an income record (securely scoped to current user)
+     */
     public function delete()
     {
         if (!isset($_SESSION['user_id'])) {
             $this->redirect('/BudgetX/public/login');
         }
 
-        // Ideally use POST for delete
         $id = $_POST['id'] ?? null;
 
         if ($id) {
@@ -121,3 +140,5 @@ class IncomeController extends Controller
         $this->redirect('/BudgetX/public/income');
     }
 }
+
+

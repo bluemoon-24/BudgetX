@@ -8,9 +8,13 @@ use App\Models\Expense;
 
 class DashboardController extends Controller
 {
+    /**
+     * Main index route for /dashboard
+     * Redirects users to their specific dashboard based on their role
+     */
     public function index()
     {
-        // Default fallback or redirect
+        // Authentication Check
         if (!isset($_SESSION['user_id'])) {
             $this->redirect('/BudgetX/public/login');
         }
@@ -24,17 +28,27 @@ class DashboardController extends Controller
         }
     }
 
+    /**
+     * Display the Basic User Dashboard
+     * Shows limited analytics and standard transaction logs
+     */
     public function basic()
     {
-        $this->loadDashboard('dashboard/basic');
+        $this->loadDashboard('dashboard_basic');
     }
 
+    /**
+     * Display the Premium User Dashboard
+     * Includes advanced analytics like spending trends, monthly velocity, and overspending alerts
+     */
     public function premium()
     {
+        // Authentication Check
         if (!isset($_SESSION['user_id'])) {
             $this->redirect('/BudgetX/public/login');
         }
 
+        // Authorization Check: Ensure only premium users can access this
         if ($_SESSION['role'] !== 'premium') {
             $this->redirect('/BudgetX/public/user/dashboard_basic');
         }
@@ -43,7 +57,7 @@ class DashboardController extends Controller
         $expenseModel = new Expense();
         $incomeModel = new Income();
 
-        // Basic Data
+        // Fetch fundamental data
         $totalIncome = $incomeModel->getTotalByUserId($userId);
         $totalExpenses = $expenseModel->getTotalByUserId($userId);
         $balance = $totalIncome - $totalExpenses;
@@ -51,11 +65,13 @@ class DashboardController extends Controller
         $recentExpenses = $expenseModel->getAllByUserId($userId);
         $expensesByCategory = $expenseModel->getExpensesByCategory($userId);
 
-        // Premium Data
+        // Feature: Advanced Premium Analytics
+        // Fetches historical data for trend analysis and velocity tracking
         $monthlyExpenses = $expenseModel->getMonthlyExpenses($userId);
         $spendingTrends = $expenseModel->getSpendingTrends($userId);
 
-        // Overspending Logic (Simple: compare current month vs prev month)
+        // Feature: Overspending Intelligence 
+        // Logic: Compare current month total expenses against the previous month
         $currentMonth = date('Y-m');
         $prevMonth = date('Y-m', strtotime('-1 month'));
 
@@ -66,6 +82,9 @@ class DashboardController extends Controller
         if ($prevMonthTotal > 0 && $currentMonthTotal > $prevMonthTotal) {
             $overspendingAlert = true;
         }
+
+        $subscriptionModel = new \App\Models\Subscription();
+        $subscription = $subscriptionModel->getStatus($userId);
 
         $data = [
             'totalIncome' => $totalIncome,
@@ -78,12 +97,17 @@ class DashboardController extends Controller
             'spendingTrends' => $spendingTrends,
             'currentMonthTotal' => $currentMonthTotal,
             'prevMonthTotal' => $prevMonthTotal,
-            'overspendingAlert' => $overspendingAlert
+            'overspendingAlert' => $overspendingAlert,
+            'subscription' => $subscription
         ];
 
-        $this->view('dashboard/premium', $data);
+        $this->view('dashboard_premium', $data);
     }
 
+    /**
+     * Shared logic for loading standard dashboard data
+     * Used mainly by the basic dashboard view
+     */
     private function loadDashboard($viewName)
     {
         // Authentication Check
@@ -96,14 +120,20 @@ class DashboardController extends Controller
         $incomeModel = new Income();
         $expenseModel = new Expense();
 
+        // Calculate Overview Stats
         $totalIncome = $incomeModel->getTotalByUserId($userId);
         $totalExpenses = $expenseModel->getTotalByUserId($userId);
         $balance = $totalIncome - $totalExpenses;
 
+        // Fetch Recent Transactions
         $recentIncome = $incomeModel->getAllByUserId($userId);
         $recentExpenses = $expenseModel->getAllByUserId($userId);
 
+        // Categorize Expenses for Charts
         $expensesByCategory = $expenseModel->getExpensesByCategory($userId);
+
+        $subscriptionModel = new \App\Models\Subscription();
+        $subscription = $subscriptionModel->getStatus($userId);
 
         $data = [
             'totalIncome' => $totalIncome,
@@ -111,9 +141,12 @@ class DashboardController extends Controller
             'balance' => $balance,
             'recentIncome' => $recentIncome,
             'recentExpenses' => $recentExpenses,
-            'expensesByCategory' => $expensesByCategory
+            'expensesByCategory' => $expensesByCategory,
+            'subscription' => $subscription
         ];
 
         $this->view($viewName, $data);
     }
 }
+
+

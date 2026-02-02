@@ -7,6 +7,9 @@ use App\Models\Expense;
 
 class ExpenseController extends Controller
 {
+    /**
+     * Display all expense records with optional category and date filtering
+     */
     public function index()
     {
         if (!isset($_SESSION['user_id'])) {
@@ -15,7 +18,7 @@ class ExpenseController extends Controller
 
         $userId = $_SESSION['user_id'];
 
-        // Filters
+        // Extraction of Filter parameters
         $category = $_GET['category'] ?? null;
         $date = $_GET['date'] ?? null;
         if ($category === '')
@@ -26,21 +29,27 @@ class ExpenseController extends Controller
         $expenseModel = new Expense();
         $expenses = $expenseModel->getAllByUserId($userId, $category, $date);
 
-        $this->view('expenses/index', [
+        $this->view('expenses', [
             'expenses' => $expenses,
             'categoryFilter' => $category,
             'dateFilter' => $date
         ]);
     }
 
+    /**
+     * Show form to record a new expense
+     */
     public function create()
     {
         if (!isset($_SESSION['user_id'])) {
             $this->redirect('/BudgetX/public/login');
         }
-        $this->view('expenses/create');
+        $this->view('expenses_create');
     }
 
+    /**
+     * Store a new expense record and associate it with a category
+     */
     public function store()
     {
         if (!isset($_SESSION['user_id'])) {
@@ -54,25 +63,30 @@ class ExpenseController extends Controller
         $date = $_POST['date'];
         $description = $_POST['description'];
 
-        // Validation
+        // Validation: Positive amount and no future spending allowed
         if ($amount <= 0) {
-            $this->view('expenses/create', ['error' => 'Amount must be greater than 0']);
+            $this->view('expenses_create', ['error' => 'Amount must be greater than 0']);
             return;
         }
 
         if (strtotime($date) > time()) {
-            $this->view('expenses/create', ['error' => 'Date cannot be in the future']);
+            $this->view('expenses_create', ['error' => 'Date cannot be in the future']);
             return;
         }
 
+        // Feature: Capital Outflow Tracking
+        // Categorizes financial leaks to help users identify saving opportunities
         $expenseModel = new Expense();
         if ($expenseModel->add($userId, $amount, $category, $label, $date, $description)) {
             $this->redirect('/BudgetX/public/expenses');
         } else {
-            $this->view('expenses/create', ['error' => 'Failed to add expense']);
+            $this->view('expenses_create', ['error' => 'Failed to add expense']);
         }
     }
 
+    /**
+     * Show form to edit an existing expense record
+     */
     public function edit()
     {
         if (!isset($_SESSION['user_id'])) {
@@ -91,9 +105,12 @@ class ExpenseController extends Controller
             $this->redirect('/BudgetX/public/expenses');
         }
 
-        $this->view('expenses/edit', ['expense' => $expense]);
+        $this->view('expenses_edit', ['expense' => $expense]);
     }
 
+    /**
+     * Update existing expense details
+     */
     public function update()
     {
         if (!isset($_SESSION['user_id'])) {
@@ -120,6 +137,9 @@ class ExpenseController extends Controller
         }
     }
 
+    /**
+     * Securely delete an expense record
+     */
     public function delete()
     {
         if (!isset($_SESSION['user_id'])) {
@@ -135,3 +155,5 @@ class ExpenseController extends Controller
         $this->redirect('/BudgetX/public/expenses');
     }
 }
+
+

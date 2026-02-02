@@ -65,4 +65,13 @@ class User
         $stmt->bindParam(':id', $id);
         return $stmt->execute();
     }
+
+    public function updateProfilePic($id, $fileName)
+    {
+        $sql = "UPDATE users SET profile_pic = :profile_pic WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam(':profile_pic', $fileName);
+        $stmt->bindParam(':id', $id);
+        return $stmt->execute();
+    }
 }
